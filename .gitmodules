@@ -1,0 +1,3 @@
+[submodule "src/spline"]
+	path = src/spline
+	url = git@github.com:Jakobimatrix/spline.git
