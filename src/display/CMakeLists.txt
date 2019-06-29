@@ -9,7 +9,8 @@ add_library(
 target_link_libraries(display_lib 
   base_lib_header_only
   base_lib
-  mandelbrot_lib)
+  mandelbrot_lib
+  timer_lib)
 
 # define the target links: specify how the libs shall be included.
 target_include_directories(display_lib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")

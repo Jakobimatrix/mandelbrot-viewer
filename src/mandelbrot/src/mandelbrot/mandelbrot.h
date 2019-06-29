@@ -12,19 +12,23 @@ public:
   Mandelbrot();
   ~Mandelbrot() {}
 
-  unsigned int mandelbrot(const Eigen::Vector2d &position);
-  unsigned int mandelbrot(int, int);
+  double mandelbrot(const Eigen::Vector2d &position) const;
+  double mandelbrot(int, int) const;
 
-  void mandelbrotGreyScale(unsigned int iterations, color::RGB<int> &rgb);
-  void mandelbrotHSV(unsigned int iterations, color::HSV<int> &hsv);
+  void mandelbrotGreyScale(double iterations, color::RGB<int> &rgb);
+  void mandelbrotHSV(double iterations, color::HSV<int> &hsv);
 
-  double redistributeHue(unsigned int iteration);
+  double redistributeHue(double iteration);
 
   void setMaxIterations(unsigned int maxIt);
 
   void initRedistributionSpline();
 
   bool setSpline(const EigenSTL::vector_Vector2d &splinePoints);
+
+  void setSmoothing(bool s);
+
+  bool getSmoothing() const;
 
 private:
   static void mandelbrotIteration(const Eigen::Vector2d &poition,
@@ -34,6 +38,8 @@ private:
   double inv_max_iterations_d = 1. / 255.;
 
   tk::spline redistribution_spline;
+
+  bool smooting = false;
 };
 
 #endif

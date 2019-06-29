@@ -20,7 +20,7 @@ add_library(
   src/base/planarTransformation.cpp
   src/base/randomGenerators.cpp)
 
-# link base_lib_header_only to base_lib
+# link libraries to base_lib
 target_link_libraries(base_lib
   base_lib_header_only
   homography_lib)

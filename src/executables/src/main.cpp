@@ -7,7 +7,7 @@
 
 int main() {
 
-  disp::DisplayOpenCV D = disp::DisplayOpenCV();
+  disp::DisplayOpenCV D;
 
   D.setDrawFunction(disp::Display::DRAWING_FUNKTION::MANDELBROT_COLORED);
 

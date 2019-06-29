@@ -1,5 +1,5 @@
 #ifndef DISPALY_H
-#define DISPLAY_H
+#define DISPALY_H
 
 #include <base/color.hpp>
 #include <base/planarTransformation.h>
@@ -7,16 +7,20 @@
 #include <boost/function.hpp>
 #include <eigen3/Eigen/Core>
 #include <mandelbrot/mandelbrot.h>
+#include <mutex>
 #include <thread>
+#include <timer/timer.hpp>
 
 namespace disp {
 
 #ifdef NDEBUG
 constexpr int DEFAULT_RESOLUTION_X = 1800;
 constexpr int DEFAULT_RESOLUTION_Y = 1000;
+constexpr int MAX_ITERATIONS = 3500;
 #else
 constexpr int DEFAULT_RESOLUTION_X = 300;
 constexpr int DEFAULT_RESOLUTION_Y = 300;
+constexpr int MAX_ITERATIONS = 100;
 #endif
 
 typedef boost::function<color::RGB<int>(const Eigen::Vector2d &,
@@ -124,7 +128,7 @@ protected:
 private:
   void threadedMainLoop();
 
-  void calculateImageMultiThreaded(int from, int to, bool load_from_stored);
+  void calculateImageMultiThreaded(bool load_from_stored);
 
   void calculateImageSingleThreaded(bool load_from_stored);
 
@@ -158,9 +162,23 @@ private:
 
   Mandelbrot mandelbrot;
 
-  Eigen::MatrixXi lastData;
+  Eigen::MatrixXd lastData;
 
-  unsigned int mandelbrot_iterations = 2000;
+  unsigned int mandelbrot_iterations = MAX_ITERATIONS;
+
+  struct MultithreadManager {
+    std::mutex access_thread_manager;
+    int packet_size;
+    int current_managed_index;
+    int max_index;
+
+    void reset(int package_size, int max_index);
+    bool getNextPackage(int &from, int &to);
+  };
+
+  MultithreadManager multithreadManager;
+
+  tool::Timer timer;
 };
 } // namespace disp
 

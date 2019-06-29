@@ -26,9 +26,8 @@ Display::Display() {
   planar_transformation.initHomography(imgSize, initial_zoom);
 
   mandelbrot.setMaxIterations(mandelbrot_iterations);
-  // 255 fast
-  // 1000
-  // 10000 crispy resolution but slow
+
+  mandelbrot.setSmoothing(true);
 
   lastData.resize(DEFAULT_RESOLUTION_X, DEFAULT_RESOLUTION_Y);
 }
@@ -75,22 +74,24 @@ Display::convertPixelWiseHSV2RGB(const Eigen::Vector2d &position,
   return rgb;
 }
 
-void Display::calculateImageMultiThreaded(int from, int to,
-                                          bool load_from_stored) {
+void Display::calculateImageMultiThreaded(bool load_from_stored) {
   const int size_vertical = getWindowSizeY();
   Eigen::Vector2d mandelbrotCoordinates;
-  for (int i = from; i < to; i++) {
-    // todo maybe sppedup with lookup table + shuffel pixel since pixel near
-    // each other might be calculated with the same speed getting threads which
-    // have less to do or each thread requests uncalculated pixel?
-    const int x = i / size_vertical;
-    const int y = i % size_vertical;
-    const Eigen::Vector2d imageCoordinates(x, y);
-    planar_transformation.transformToWorld(imageCoordinates,
-                                           mandelbrotCoordinates);
-    setPixelColor(x, y,
-                  drawPixelWiseRGB(mandelbrotCoordinates, Eigen::Vector2i(x, y),
-                                   load_from_stored));
+  int from, to;
+
+  while (multithreadManager.getNextPackage(from, to)) {
+    for (int i = from; i < to; i++) {
+      const int x = i / size_vertical;
+      const int y = i % size_vertical;
+      const Eigen::Vector2d imageCoordinates(x, y);
+
+      planar_transformation.transformToWorld(imageCoordinates,
+                                             mandelbrotCoordinates);
+
+      setPixelColor(x, y,
+                    drawPixelWiseRGB(mandelbrotCoordinates,
+                                     Eigen::Vector2i(x, y), load_from_stored));
+    }
   }
 }
 
@@ -112,31 +113,22 @@ void Display::calculateImageSingleThreaded(bool load_from_stored) {
 void Display::calculateImage(bool load_from_stored) {
   if (num_threads > 1) {
     const int numPixel = getWindowSizeX() * getWindowSizeY();
+    // Dont make the size too small to avoid "too much access to the Thread
+    // manager which is mutexed. Dont make the size too big to avoid one thread
+    // to be finnished with nothing to do left while others are still
+    // calculateing.
+    const int package_size = getWindowSizeX();
+    multithreadManager.reset(package_size, numPixel);
+
     std::vector<std::thread> threadpool;
 
-    // distribute the pixels as homogen as possible.
-    const double pix_per_thread_exact =
-        static_cast<double>(numPixel) / static_cast<double>(num_threads);
-    const int pix_per_thread = static_cast<int>(pix_per_thread_exact);
-    double reminder = 0;
-    double reminder_iteration = pix_per_thread_exact - pix_per_thread;
-
-    int from = 0;
-    int to = 0;
     for (int t = 0; t < num_threads; t++) {
-      from = to;
-      to = from + pix_per_thread;
-      reminder += reminder_iteration;
-      if (reminder >= 1.0) {
-        to += 1;
-        reminder -= 1.;
-      }
       // starting the thread
       threadpool.push_back(std::thread(&Display::calculateImageMultiThreaded,
-                                       this, from, to, load_from_stored));
+                                       this, load_from_stored));
     }
 
-    // wait untill all are finnished
+    // wait until all are finnished
     std::for_each(threadpool.begin(), threadpool.end(),
                   std::mem_fn(&std::thread::join));
 
@@ -159,7 +151,10 @@ bool Display::startUpdateLoop() {
 void Display::threadedMainLoop() {
   while (isRunning()) {
     if (need_update) {
+      timer.start();
       calculateImage(false);
+      timer.stop();
+      std::cout << timer << std::endl;
       need_update = false;
       updateImage();
     } else {
@@ -206,7 +201,8 @@ void Display::userMouseInteractionCallback(EVENT event,
   } else if (event == EVENT::MOUSE_MOVE) {
     current_mouse_picture_pos = mousePos;
   } else if (event == EVENT::RIGHT_MOUSE_CLICK) {
-    planar_transformation.historyStepBack();
+    mandelbrot.setSmoothing(!mandelbrot.getSmoothing());
+    // planar_transformation.historyStepBack();
     need_update = true;
   } else if (event == EVENT::PICTURE) {
     saveCurrentImage();
@@ -263,11 +259,11 @@ void Display::setDrawFunction(DRAWING_FUNKTION df) {
 const color::HSV<int> Display::testbild(const Eigen::Vector2d &position,
                                         const Eigen::Vector2i &save,
                                         bool load) {
-  int h_deg;
+  double h_deg;
   if (load) {
     h_deg = lastData(save.x(), save.y());
   } else {
-    h_deg = 100 * std::abs(position.x()) + 100 * std::abs(position.y());
+    h_deg = 100. * std::abs(position.x()) + 100. * std::abs(position.y());
     lastData(save.x(), save.y()) = h_deg;
   }
   color::HSV<int> result;
@@ -287,7 +283,7 @@ const color::HSV<int>
 Display::mandelbrotColored(const Eigen::Vector2d &position,
                            const Eigen::Vector2i &save, bool load) {
 
-  unsigned int iterations;
+  double iterations;
   if (load) {
     iterations = lastData(save.x(), save.y());
   } else {
@@ -304,7 +300,7 @@ const color::RGB<int> Display::mandelbrotGray(const Eigen::Vector2d &position,
                                               const Eigen::Vector2i &save,
                                               bool load) {
 
-  unsigned int iterations;
+  double iterations;
   if (load) {
     iterations = lastData(save.x(), save.y());
   } else {
@@ -351,6 +347,28 @@ void Display::setMandelbrotIterations(unsigned int iterations) {
 }
 unsigned int Display::getMandelbrotIterations() const {
   return mandelbrot_iterations;
+}
+
+void Display::MultithreadManager::reset(int package_size_, int max_index_) {
+  current_managed_index = 0;
+  packet_size = package_size_;
+  max_index = max_index_;
+}
+
+bool Display::MultithreadManager::getNextPackage(int &from, int &to) {
+  access_thread_manager.lock();
+  bool work_not_done = true;
+  from = current_managed_index;
+  to = from + packet_size;
+  if (to > max_index) {
+    to = max_index;
+    if (from >= max_index) {
+      work_not_done = false;
+    }
+  }
+  current_managed_index = to;
+  access_thread_manager.unlock();
+  return work_not_done;
 }
 
 } // namespace disp

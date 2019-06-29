@@ -3,26 +3,33 @@
 
 Mandelbrot::Mandelbrot() { initRedistributionSpline(); }
 
-unsigned int Mandelbrot::mandelbrot(const Eigen::Vector2d &position) {
+double Mandelbrot::mandelbrot(const Eigen::Vector2d &position) const {
   Eigen::Vector2d Zn(0.0, 0.0);
   for (unsigned int i = 0; i < max_iterations; i++) {
     mandelbrotIteration(position, Zn);
-    if (Zn.x() * Zn.x() + Zn.y() * Zn.y() > 4) {
+    if (Zn.x() * Zn.x() + Zn.y() * Zn.y() > 4.) {
+      if (smooting) {
+        return i + 1. - std::log(std::log2(Zn.norm()));
+      }
       return i;
     }
   }
   return max_iterations;
 }
 
+double Mandelbrot::mandelbrot(int x, int y) const {
+  const Eigen::Vector2d P(x, y);
+  return mandelbrot(P);
+}
+
+void Mandelbrot::setSmoothing(bool s) { smooting = s; }
+
+bool Mandelbrot::getSmoothing() const { return smooting; }
+
 void Mandelbrot::mandelbrotIteration(const Eigen::Vector2d &position,
                                      Eigen::Vector2d &Zn) {
   Zn = Eigen::Vector2d(Zn.x() * Zn.x() - Zn.y() * Zn.y(), 2 * Zn.x() * Zn.y()) +
        position;
-}
-
-unsigned int Mandelbrot::mandelbrot(int x, int y) {
-  const Eigen::Vector2d P(x, y);
-  return mandelbrot(P);
 }
 
 void Mandelbrot::setMaxIterations(unsigned int maxIt) {
@@ -31,11 +38,8 @@ void Mandelbrot::setMaxIterations(unsigned int maxIt) {
   initRedistributionSpline();
 }
 
-void Mandelbrot::mandelbrotGreyScale(unsigned int iterations,
-                                     color::RGB<int> &rgb) {
-  const double iterations_d = static_cast<double>(iterations);
-  const double result = iterations_d * 255. * inv_max_iterations_d;
-
+void Mandelbrot::mandelbrotGreyScale(double iterations, color::RGB<int> &rgb) {
+  const double result = iterations * 255. * inv_max_iterations_d;
   rgb.r = rgb.g = rgb.b = func::round(result);
 }
 
@@ -81,12 +85,12 @@ bool Mandelbrot::setSpline(const EigenSTL::vector_Vector2d &spline_points) {
   return true;
 }
 
-double Mandelbrot::redistributeHue(unsigned int iteration) {
+double Mandelbrot::redistributeHue(double iteration) {
 
   return redistribution_spline(iteration);
 }
 
-void Mandelbrot::mandelbrotHSV(unsigned int iterations, color::HSV<int> &hsv) {
+void Mandelbrot::mandelbrotHSV(double iterations, color::HSV<int> &hsv) {
 
   // first redistribute the iterations which represent the hue value to enhance
   // some colors and reduce others

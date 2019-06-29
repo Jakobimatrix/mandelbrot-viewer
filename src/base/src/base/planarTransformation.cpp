@@ -116,8 +116,6 @@ void PlanarTransformation::setNewZoomWindowFromPicture(
       associated_points, tool::Homography::Methode::PARTIAL_PIV_LU);
   homographyPicture2World = homographyWorld2Picture.inverse();
 
-  std::cout << homographyWorld2Picture << std::endl;
-
   if (save_history) {
     saveCurrentToHistory();
   }
