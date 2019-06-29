@@ -1,9 +1,9 @@
 #include <array>
-#include <base/homography.hpp>
 #include <base/macros.hpp>
 #include <base/planarTransformation.h>
 #include <base/typedefs.hpp>
 #include <eigen3/Eigen/Geometry>
+#include <homography/homography.hpp>
 
 namespace conv {
 
@@ -90,8 +90,6 @@ void PlanarTransformation::setNewZoomWindowFromPicture(
     const geometry::Rect &zoom_window_picture_coordinates,
     const Eigen::Vector2d &image_size, bool save_history) {
 
-  DEBUGMSG("setNewZoomWindowFromPicture()");
-
   // get the 4 corners of the window
   std::array<Eigen::Vector2d, 4> picture_reference;
   getPictureReferenceABCD(image_size, picture_reference);
@@ -111,14 +109,6 @@ void PlanarTransformation::setNewZoomWindowFromPicture(
     // set the 4 corners of the window as assosiated points to the calculated
     // world point
     associated_points[i] = std::make_pair(world, picture_reference[i]);
-    /*
-      DEBUGMSG("mapping: picture:");
-      DEBUGVAR(zoom_reference[i]);
-      DEBUGMSG("which is in world:");
-      DEBUGVAR(world);
-      DEBUGMSG("to:");
-      DEBUGVAR(picture_reference[i]);
-      */
   }
 
   // find the new homography
@@ -126,15 +116,7 @@ void PlanarTransformation::setNewZoomWindowFromPicture(
       associated_points, tool::Homography::Methode::PARTIAL_PIV_LU);
   homographyPicture2World = homographyWorld2Picture.inverse();
 
-  DEBUGMSG("ERROR");
-  for (unsigned int i = 0; i < 4; i++) {
-    Eigen::Vector2d converted;
-    transformToWorld(associated_points[i].second, converted);
-    DEBUGVAR(associated_points[i].first - converted);
-    transformToPicture(associated_points[i].first, converted);
-    DEBUGVAR(associated_points[i].second - converted);
-  }
-  debugInformation(image_size);
+  std::cout << homographyWorld2Picture << std::endl;
 
   if (save_history) {
     saveCurrentToHistory();

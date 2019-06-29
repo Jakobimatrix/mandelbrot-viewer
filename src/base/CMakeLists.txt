@@ -21,7 +21,9 @@ add_library(
   src/base/randomGenerators.cpp)
 
 # link base_lib_header_only to base_lib
-target_link_libraries(base_lib base_lib_header_only)
+target_link_libraries(base_lib
+  base_lib_header_only
+  homography_lib)
 
 # define the target links: specify how the libs shall be included.
 target_include_directories(base_lib_header_only INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")

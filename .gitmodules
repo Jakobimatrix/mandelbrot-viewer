@@ -1,3 +1,6 @@
 [submodule "src/spline"]
 	path = src/spline
 	url = git@github.com:Jakobimatrix/spline.git
+[submodule "src/homography"]
+	path = src/homography
+	url = git@github.com:Jakobimatrix/homography.git
