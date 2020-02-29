@@ -1,9 +1,9 @@
 [submodule "src/spline"]
 	path = src/spline
-	url = git@github.com:Jakobimatrix/spline.git
+	url = https://github.com:Jakobimatrix/spline.git
 [submodule "src/homography"]
 	path = src/homography
-	url = git@github.com:Jakobimatrix/homography.git
+	url = https://github.com:Jakobimatrix/homography.git
 [submodule "src/timer"]
 	path = src/timer
-	url = git@github.com:Jakobimatrix/timer.git
+	url = https://github.com:Jakobimatrix/timer.git
