@@ -16,7 +16,7 @@ public:
 
   ~DisplayOpenCV();
 
-  void changeResolution(int x, int y) override;
+  void changeResolution(int x, int y);
 
   void updateImage() override;
 
@@ -25,6 +25,9 @@ public:
   bool isRunning() override;
 
   bool setPixelColor(int x, int y, const color::RGB<int> &rgb) override;
+  bool setPixelColor(int x, int y, const color::RGB<double> &rgb) override;
+  bool setPixelColor(int x, int y, const color::HSV<int> &rgb) override;
+  bool setPixelColor(int x, int y, const color::HSV<double> &rgb) override;
 
   int getWindowSizeX() const override;
 

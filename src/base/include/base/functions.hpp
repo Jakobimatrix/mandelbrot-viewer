@@ -91,6 +91,15 @@ static int hsvNormalize255(int value) {
   return value;
 }
 
+static double hsvNormalize01(double value) {
+  if (value > 1) {
+    value = hsvNormalize01(value - 1.);
+  } else if (value < 0) {
+    value = hsvNormalize01(value + 1.);
+  }
+  return value;
+}
+
 template <class T> T clip255MinMax(T value) {
   if (value < 0) {
     return static_cast<T>(0);

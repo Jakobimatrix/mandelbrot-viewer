@@ -67,16 +67,31 @@ Eigen::Vector2d DisplayOpenCV::imageSize() const {
   return Eigen::Vector2d(image.cols, image.rows);
 }
 
-bool DisplayOpenCV::setPixelColor(int x, int y, const color::RGB<int> &rgb) {
+bool DisplayOpenCV::setPixelColor(int x, int y, const color::RGB<int> &rgbi) {
   if (x > image.cols || y > image.rows) {
     return false;
   }
   // bgr!
 
-  image.at<cv::Vec3b>(y, x) = cv::Vec3b(static_cast<unsigned char>(rgb.b),
-                                        static_cast<unsigned char>(rgb.g),
-                                        static_cast<unsigned char>(rgb.r));
+  image.at<cv::Vec3b>(y, x) = cv::Vec3b(static_cast<unsigned char>(rgbi.b),
+                                        static_cast<unsigned char>(rgbi.g),
+                                        static_cast<unsigned char>(rgbi.r));
   return true;
+}
+
+bool DisplayOpenCV::setPixelColor(int x, int y, const color::RGB<double> &rgb) {
+  const color::RGB<int> rgbi = rgb;
+  return setPixelColor(x, y, rgbi);
+}
+
+bool DisplayOpenCV::setPixelColor(int x, int y, const color::HSV<double> &hsv) {
+  const color::RGB<int> rgbi = hsv;
+  return setPixelColor(x, y, rgbi);
+}
+
+bool DisplayOpenCV::setPixelColor(int x, int y, const color::HSV<int> &hsvi) {
+  const color::RGB<int> rgbi = hsvi;
+  return setPixelColor(x, y, rgbi);
 }
 
 void DisplayOpenCV::updateImage() {

@@ -14,9 +14,13 @@ public:
 
   double mandelbrot(const Eigen::Vector2d &position) const;
   double mandelbrot(int, int) const;
+  double mandelbrot_classic(const Eigen::Vector2d &position) const;
+  double mandelbrot_smooth(const Eigen::Vector2d &position) const;
+  bool isInsideM1M2(const Eigen::Vector2d &position) const;
 
   void mandelbrotGreyScale(double iterations, color::RGB<int> &rgb);
-  void mandelbrotHSV(double iterations, color::HSV<int> &hsv);
+  color::HSV<double> mandelbrotSPLINE(double iterations);
+  color::RGB<double> mandelbrotCOS(double iterations);
 
   double redistributeHue(double iteration);
 
@@ -34,12 +38,12 @@ private:
   static void mandelbrotIteration(const Eigen::Vector2d &poition,
                                   Eigen::Vector2d &Zn);
 
-  unsigned int max_iterations = 255;
-  double inv_max_iterations_d = 1. / 255.;
+  unsigned int max_iterations = 100;
+  double inv_max_iterations_d = 1. / 100.;
 
   tk::spline redistribution_spline;
 
-  bool smooting = false;
+  bool smooting = true;
 };
 
 #endif

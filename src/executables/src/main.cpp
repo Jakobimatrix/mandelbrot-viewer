@@ -7,10 +7,17 @@
 
 int main() {
 
+#ifdef NDEBUG
+  constexpr int MAX_ITERATIONS = 512;
+#else
+  constexpr int MAX_ITERATIONS = 100;
+#endif
+
   disp::DisplayOpenCV D;
 
-  D.setDrawFunction(disp::Display::DRAWING_FUNKTION::MANDELBROT_COLORED);
-
+  D.setMandelbrotIterations(MAX_ITERATIONS);
+  // D.setDrawFunction(disp::Display::COLORING::SPLINE);
+  D.setDrawFunction(disp::Display::COLORING::COS);
   D.setNumThreads(4);
 
   D.startUpdateLoop();

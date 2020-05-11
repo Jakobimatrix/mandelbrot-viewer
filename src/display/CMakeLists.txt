@@ -3,7 +3,6 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 # Define the name of the base library and all source files belonging to it
 add_library(
   display_lib
-  src/display/display.cpp
   src/display/displayOpenCV.cpp)
 
 target_link_libraries(display_lib 
