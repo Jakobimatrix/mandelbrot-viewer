@@ -49,10 +49,12 @@ public:
 private:
   cv::Mat image;
 
-  int dbg1 = 100;
-  int dbg2 = 100;
-  int dbg3 = 500;
-  int dbg4 = 500;
+  int dbg1 = static_cast<int>(0.2 * SLIDER_TICKS);
+  int dbg2 = static_cast<int>(0.4 * SLIDER_TICKS);
+  int dbg3 = static_cast<int>(0.5 * SLIDER_TICKS);
+  int dbg4 = static_cast<int>(0.7 * SLIDER_TICKS);
+
+  static const int SLIDER_TICKS = 1000;
 };
 } // namespace disp
 

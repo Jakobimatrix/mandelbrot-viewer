@@ -117,7 +117,7 @@ bool Mandelbrot::setSpline(const EigenSTL::vector_Vector2d &spline_points) {
   }
 
   std::vector<double> X, Y;
-  for (const auto sp : spline_points) {
+  for (const auto &sp : spline_points) {
     X.push_back(sp.x());
     Y.push_back(sp.y());
   }
@@ -130,7 +130,6 @@ bool Mandelbrot::setSpline(const EigenSTL::vector_Vector2d &spline_points) {
 }
 
 double Mandelbrot::redistributeHue(double iteration) {
-
   return redistribution_spline(iteration);
 }
 
@@ -155,61 +154,57 @@ color::HSV<double> Mandelbrot::mandelbrotSPLINE(double iterations) {
   // hue is between red = 0° -> 45° pink -> 120° blue -> 240° green -> 300°
   // yellow -> 360° red
 
-  const double iterations_0_255 =
-      redistributed_iterations * inv_max_iterations_d;
+  auto unit2Angle = [](double unit) { return unit * 360.; };
+  auto Angle2Unit = [](double angle) { return angle / 360.; };
+
+  auto cos_fade = [](double val, double min, double max, bool mid_high) {
+    double const range = max - min;
+    double const mid = range + min;
+    double const vz = mid_high ? -0.5 : 0.5;
+    return vz * std::cos((val - mid) * 2 * M_PI / range) + 0.5;
+  };
+
+  const double iterations_0_1 = redistributed_iterations * inv_max_iterations_d;
   // this could be a slider "rotateing the color wheel"
   const double rotate_deg = 120.;
-  const double rotated_iterations_0_255 =
-      iterations_0_255 + (rotate_deg / 360.);
-
-  // we might have rotted over 255
+  const double rotated_iterations_0_360 =
+      unit2Angle(iterations_0_1) + rotate_deg;
+  // we might have rotated over 360
   const double clipped_rotated_result =
-      func::hsvNormalize01(func::round(rotated_iterations_0_255));
-  // hsv.h = clipped_rotated_result;
-  hsv.h = 1 - clipped_rotated_result;
+      func::wrapAngleAroundGivenAngleDeg(rotated_iterations_0_360, 180.);
 
+  // invert spectrum
+  const double hue = 360 - clipped_rotated_result;
+  hsv.h = Angle2Unit(hue);
   // instead a fade to green a fade to white gives nice kontrasts
   // between 50° and 180°
   // could be sliders
-  const double start_fade_white_deg = 50;
-  const double start_fade_white = start_fade_white_deg / 360.;
+  const double start_fade_white_deg = 50.;
   const double end_fade_white_deg = 180.;
-  const double end_fade_white = end_fade_white_deg / 360.;
-  const double white_fadeing_range_halfe =
-      (end_fade_white - start_fade_white) * 0.5;
-  const double center_white_fadeing_range =
-      white_fadeing_range_halfe + start_fade_white;
-
-  if (hsv.h > start_fade_white) {
-    if (hsv.h < center_white_fadeing_range) {
-      // fade to white
-      const double gradient = 1. / white_fadeing_range_halfe;
-      hsv.s = func::round(gradient * (center_white_fadeing_range - hsv.h));
-    } else if (hsv.h < end_fade_white) {
-      // fade to color
-      const double gradient = 1. / white_fadeing_range_halfe;
-      hsv.s = func::round(gradient * (hsv.h - center_white_fadeing_range));
-    } else {
-      hsv.s = 1;
-    }
+  // use cos periode to fade between 1-0-1 smoothly
+  if (func::isBetween(hue, start_fade_white_deg, end_fade_white_deg)) {
+    hsv.s = cos_fade(hue, start_fade_white_deg, end_fade_white_deg, false);
   } else {
     hsv.s = 1.;
   }
 
   // now a very nice touch: a fade to black when aproaching 0 iterations or
   // max iterations
+  const double start_fade_black_unit_low = 0. / 360.;
+  const double end_fade_blacke_unit_low = 20. / 360.;
+  const double start_fade_black_unit_high = 340. / 360.;
+  const double end_fade_blacke_unit_high = 360. / 360.;
 
-  const double clipping_degree = 20.; // this could be a slider
-  const double fadeing_area = clipping_degree / 360.;
-  const double gradient = fadeing_area;
-
-  if (iterations_0_255 < fadeing_area) {
-    // fade to black when close to 0 iterations
-    hsv.v = func::round(gradient * iterations_0_255);
-  } else if (iterations_0_255 > 1. - fadeing_area) {
-    // fade to black when closer to 255
-    hsv.v = func::round(gradient * (1. - iterations_0_255));
+  if (iterations_0_1 < end_fade_blacke_unit_low) {
+    // fade to black when close to 0 deg
+    hsv.v = cos_fade(iterations_0_1, start_fade_black_unit_low,
+                     2. * end_fade_blacke_unit_low, true);
+  } else if (iterations_0_1 > start_fade_black_unit_high) {
+    // fade to black when closer to 360 deg
+    hsv.v = cos_fade(iterations_0_1, 2. * start_fade_black_unit_high,
+                     end_fade_blacke_unit_high, true);
   } else {
-    hsv.v = 1;
+    hsv.v = 1.;
   }
+  return hsv;
 }

@@ -64,8 +64,16 @@ template <class T> void minMax(T &x1, T &x2) {
   }
 }
 
+template <class T> bool isBetween(T x, T min, T max) {
+  minMax(min, max);
+  if (min < x && x < max) {
+    return true;
+  }
+  return false;
+}
+
 /*!
- * \brief wraps the given angle into the range [-given-Pi, given+Pi).
+ * \brief wraps the given angle into the range [given-Pi, given+Pi).
  * \param angle The angle to wrap.
  * \param given The angle to wrap around.
  * \return the wraped angle.
@@ -75,6 +83,19 @@ template <typename T> T wrapAngleAroundGivenAngle(T angle, T given) {
       std::is_floating_point<T>::value,
       "you can only wrap floating point angles (float, double, long double)");
   return positiveModulo(angle - given + M_PI, 2 * M_PI) - M_PI + given;
+}
+
+/*!
+ * \brief wraps the given angle into the range [given-180, given+180).
+ * \param angle The angle to wrap.
+ * \param given The angle to wrap around.
+ * \return the wraped angle.
+ */
+template <typename T> T wrapAngleAroundGivenAngleDeg(T angle, T given) {
+  static_assert(
+      std::is_floating_point<T>::value,
+      "you can only wrap floating point angles (float, double, long double)");
+  return positiveModulo(angle - given + 180, 360) - 180 + given;
 }
 
 template <class T> T clip255Mirror(T value) {

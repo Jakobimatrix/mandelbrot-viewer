@@ -26,6 +26,8 @@ public:
 
   void setMaxIterations(unsigned int maxIt);
 
+  unsigned int getMaxIterations() const { return max_iterations; }
+
   void initRedistributionSpline();
 
   bool setSpline(const EigenSTL::vector_Vector2d &splinePoints);

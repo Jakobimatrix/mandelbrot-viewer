@@ -12,26 +12,22 @@ DisplayOpenCV::DisplayOpenCV()
 
   char TrackbarName1[50];
   sprintf(TrackbarName1, "x1 %d", 1000);
-  cv::createTrackbar(TrackbarName1, disp::WINDOW_NAME, &dbg1,
-                     getMandelbrotIterations(),
+  cv::createTrackbar(TrackbarName1, disp::WINDOW_NAME, &dbg1, SLIDER_TICKS,
                      DisplayOpenCV::dbgSliderCallback, this);
 
   char TrackbarName2[50];
   sprintf(TrackbarName2, "y1 %d", 1000);
-  cv::createTrackbar(TrackbarName2, disp::WINDOW_NAME, &dbg2,
-                     getMandelbrotIterations(),
+  cv::createTrackbar(TrackbarName2, disp::WINDOW_NAME, &dbg2, SLIDER_TICKS,
                      DisplayOpenCV::dbgSliderCallback, this);
 
   char TrackbarName3[50];
   sprintf(TrackbarName3, "x2 x %d", 1000);
-  cv::createTrackbar(TrackbarName3, disp::WINDOW_NAME, &dbg3,
-                     getMandelbrotIterations(),
+  cv::createTrackbar(TrackbarName3, disp::WINDOW_NAME, &dbg3, SLIDER_TICKS,
                      DisplayOpenCV::dbgSliderCallback, this);
 
   char TrackbarName4[50];
   sprintf(TrackbarName4, "y2 x %d", 1000);
-  cv::createTrackbar(TrackbarName4, disp::WINDOW_NAME, &dbg4,
-                     getMandelbrotIterations(),
+  cv::createTrackbar(TrackbarName4, disp::WINDOW_NAME, &dbg4, SLIDER_TICKS,
                      DisplayOpenCV::dbgSliderCallback, this);
 }
 
@@ -142,7 +138,12 @@ void DisplayOpenCV::callUserMouseInteractionCallback(int event, int x, int y,
 
 void DisplayOpenCV::dbgSliderCallback(int i, void *me) {
   auto that = static_cast<DisplayOpenCV *>(me);
-  that->tempSetDebugParam(that->dbg1, that->dbg2, that->dbg3, that->dbg4);
+  const auto fn = [&](int val) {
+    return static_cast<double>(val) / static_cast<double>(SLIDER_TICKS);
+  };
+
+  that->tempSetDebugParam(fn(that->dbg1), fn(that->dbg2), fn(that->dbg3),
+                          fn(that->dbg4));
 }
 
 } // namespace disp

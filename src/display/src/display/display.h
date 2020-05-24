@@ -113,8 +113,6 @@ public:
   }
 
   void setMandelbrotIterations(unsigned int iterations) {
-    mandelbrot_iterations = iterations;
-
     mandelbrot.setMaxIterations(iterations);
     // todo reset spline
     calculateImage(false);
@@ -136,7 +134,7 @@ protected:
     initial_zoom.setCenter(Eigen::Vector2d(0, 0));
 
     planar_transformation.initHomography(imgSize, initial_zoom);
-    mandelbrot.setMaxIterations(mandelbrot_iterations);
+    mandelbrot.setMaxIterations(255);
     mandelbrot.setSmoothing(true);
 
     setDrawFunction(COLORING::COS);
@@ -185,14 +183,17 @@ protected:
     redrawLastFrame();
   }
 
+  // set debug params between 0 and 1
   bool tempSetDebugParam(double dbg1, double dbg2, double dbg3, double dbg4) {
     EigenSTL::vector_Vector2d splinePoints;
 
     splinePoints.push_back(Eigen::Vector2d(0, 0));
-    splinePoints.push_back(Eigen::Vector2d(dbg1, dbg2));
-    splinePoints.push_back(Eigen::Vector2d(dbg3, dbg4));
-    splinePoints.push_back(
-        Eigen::Vector2d(mandelbrot_iterations, mandelbrot_iterations));
+    splinePoints.push_back(Eigen::Vector2d(dbg1, dbg2) *
+                           mandelbrot.getMaxIterations());
+    splinePoints.push_back(Eigen::Vector2d(dbg3, dbg4) *
+                           mandelbrot.getMaxIterations());
+    splinePoints.push_back(Eigen::Vector2d(mandelbrot.getMaxIterations(),
+                                           mandelbrot.getMaxIterations()));
 
     tempSetMandelbrotSpline(splinePoints);
   }
@@ -219,9 +220,19 @@ protected:
 
   // virtual void callUserMouseInteractionCallback() = 0; TODO
 
-  unsigned int getMandelbrotIterations() const { return mandelbrot_iterations; }
+  unsigned int getMandelbrotIterations() const {
+    return mandelbrot.getMaxIterations();
+  }
 
 private:
+  void drawAllPixel() {
+    for (int col = 0; col < resolution_x; col++) {
+      for (int row = 0; row < resolution_y; row++) {
+        drawPixelWise_f(col, row);
+      }
+    }
+  }
+
   void threadedMainLoop() {
     while (isRunning()) {
       if (need_update) {
@@ -303,11 +314,7 @@ private:
       normalizeLastData();
     }
 
-    for (int col = 0; col < resolution_x; col++) {
-      for (int row = 0; row < resolution_y; row++) {
-        drawPixelWise_f(col, row);
-      }
-    }
+    drawAllPixel();
   }
 
   void drawMandelbrotCOS(int x, int y) {
@@ -348,8 +355,9 @@ private:
     }
   }
 
+  // only calculate the colors, not the mandelbrotiterations
   void redrawLastFrame() {
-    // TODO
+    drawAllPixel();
     updateImage();
   }
 
@@ -357,7 +365,7 @@ private:
     const Eigen::VectorXd max_row_values = lastData.rowwise().maxCoeff();
     const Eigen::VectorXd min_row_values = lastData.rowwise().minCoeff();
     double max = 0;
-    double min = mandelbrot_iterations;
+    double min = mandelbrot.getMaxIterations();
     for (int i = 0; i < resolution_x; i++) {
       if (max < max_row_values(i)) {
         max = max_row_values(i);
@@ -367,7 +375,8 @@ private:
       }
     }
     const double span = max - min;
-    const double multiply = static_cast<double>(mandelbrot_iterations) / span;
+    const double multiply =
+        static_cast<double>(mandelbrot.getMaxIterations()) / span;
     lastData = (lastData.array() - min) * multiply;
   }
 
@@ -380,7 +389,6 @@ private:
   bool need_update = true;
   Mandelbrot mandelbrot;
   Eigen::MatrixXd lastData;
-  unsigned int mandelbrot_iterations = 255;
   MultithreadManager multithreadManager;
   tool::Timer timer;
   bool normalise_mandelbrot_iterations = true;

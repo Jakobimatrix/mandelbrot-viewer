@@ -16,8 +16,8 @@ int main() {
   disp::DisplayOpenCV D;
 
   D.setMandelbrotIterations(MAX_ITERATIONS);
-  // D.setDrawFunction(disp::Display::COLORING::SPLINE);
-  D.setDrawFunction(disp::Display::COLORING::COS);
+  D.setDrawFunction(disp::Display::COLORING::SPLINE);
+  // D.setDrawFunction(disp::Display::COLORING::COS);
   D.setNumThreads(4);
 
   D.startUpdateLoop();
