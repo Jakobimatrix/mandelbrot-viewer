@@ -114,13 +114,15 @@ void DisplayOpenCV::saveCurrentImage() const {
   const std::string name = getCurrentPositionIdentifier();
   const std::string path = "../images/";
   cv::imwrite(path + name + ".png", image);
-  std::cout << "saved image to " << path << std::endl;
+  std::cout << "saved image to " << path + name + ".png" << std::endl;
 }
 
 void DisplayOpenCV::callUserMouseInteractionCallback(int event, int x, int y,
                                                      int flags, void *me) {
+  // https://vovkos.github.io/doxyrest-showcase/opencv/sphinx_rtd_theme/enum_cv_MouseEventTypes.html
   EVENT own_event = EVENT::OTHER;
-  if (event == cv::EVENT_MBUTTONDBLCLK) {
+  // std::cout << "EVENT: " << event << std::endl;
+  if (event == cv::EVENT_MBUTTONUP) {
     own_event = EVENT::PICTURE;
   } else if (event == cv::EVENT_LBUTTONDOWN) {
     own_event = EVENT::LEFT_MOUSE_DOWN;
@@ -128,7 +130,7 @@ void DisplayOpenCV::callUserMouseInteractionCallback(int event, int x, int y,
     own_event = EVENT::LEFT_MOUSE_UP;
   } else if (event == cv::EVENT_MOUSEMOVE) {
     own_event = EVENT::MOUSE_MOVE;
-  } else if (event == cv::EVENT_RBUTTONDBLCLK) {
+  } else if (event == cv::EVENT_RBUTTONDOWN) {
     own_event = EVENT::RIGHT_MOUSE_CLICK;
   }
   const Eigen::Vector2d pos(x, y);

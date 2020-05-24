@@ -156,7 +156,7 @@ void PlanarTransformation::saveCurrentToHistory() {
 }
 
 void PlanarTransformation::historyStepBack() {
-  if (history_current_index < 0) {
+  if (history_current_index < 1) {
     return;
   }
   history_current_index--;

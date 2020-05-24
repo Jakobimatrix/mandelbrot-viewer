@@ -112,13 +112,6 @@ public:
     rect.setCenter(center);
   }
 
-  void setMandelbrotIterations(unsigned int iterations) {
-    mandelbrot.setMaxIterations(iterations);
-    // todo reset spline
-    calculateImage(false);
-    updateImage();
-  }
-
 protected:
   Display() {
     Eigen::Vector2d imgSize(DEFAULT_RESOLUTION_X, DEFAULT_RESOLUTION_Y);
@@ -134,7 +127,6 @@ protected:
     initial_zoom.setCenter(Eigen::Vector2d(0, 0));
 
     planar_transformation.initHomography(imgSize, initial_zoom);
-    mandelbrot.setMaxIterations(255);
     mandelbrot.setSmoothing(true);
 
     setDrawFunction(COLORING::COS);
@@ -185,6 +177,9 @@ protected:
 
   // set debug params between 0 and 1
   bool tempSetDebugParam(double dbg1, double dbg2, double dbg3, double dbg4) {
+
+    // setMandelbrotIterations(dbg1 * 1000);
+    // std::cout << "iterate " << dbg1 * 1000 << std::endl;
     EigenSTL::vector_Vector2d splinePoints;
 
     splinePoints.push_back(Eigen::Vector2d(0, 0));
@@ -210,8 +205,7 @@ protected:
     } else if (event == EVENT::MOUSE_MOVE) {
       current_mouse_picture_pos = mousePos;
     } else if (event == EVENT::RIGHT_MOUSE_CLICK) {
-      mandelbrot.setSmoothing(!mandelbrot.getSmoothing());
-      // planar_transformation.historyStepBack();
+      planar_transformation.historyStepBack();
       need_update = true;
     } else if (event == EVENT::PICTURE) {
       saveCurrentImage();
@@ -225,6 +219,20 @@ protected:
   }
 
 private:
+  void chooseNumCalculations() {
+    // iteration_resolution low: 100, high: 1000
+    const double iteration_resolution = 255;
+    const double max_log_zoom = 35;
+    // depending on zoom factor wee need more iterations
+    const double zoom = std::log(-getCurrentWorldZoom());
+    const unsigned int iterations =
+        static_cast<unsigned int>(zoom * iteration_resolution / max_log_zoom) +
+        62;
+    mandelbrot.setMaxIterations(iterations);
+    std::cout << "zoom: " << zoom << "-"
+              << "iterations: " << iterations << std::endl;
+  };
+
   void drawAllPixel() {
     for (int col = 0; col < resolution_x; col++) {
       for (int row = 0; row < resolution_y; row++) {
@@ -282,8 +290,10 @@ private:
   }
 
   void calculateImage(bool load_from_stored) {
+    chooseNumCalculations();
     if (load_from_stored) {
-      // dont do multithred
+      drawAllPixel();
+      return;
     }
     if (num_threads > 1) {
       const int numPixel = getWindowSizeX() * getWindowSizeY();
@@ -310,7 +320,7 @@ private:
       calculateImageSingleThreaded();
     }
 
-    if (normalise_mandelbrot_iterations && !load_from_stored) {
+    if (normalise_mandelbrot_iterations) {
       normalizeLastData();
     }
 
