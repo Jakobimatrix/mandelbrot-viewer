@@ -23,7 +23,8 @@ add_library(
 # link libraries to base_lib
 target_link_libraries(base_lib
   base_lib_header_only
-  homography_lib)
+  homography_lib
+  spline_lib)
 
 # define the target links: specify how the libs shall be included.
 target_include_directories(base_lib_header_only INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/include")

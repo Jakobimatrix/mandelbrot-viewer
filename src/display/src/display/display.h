@@ -81,10 +81,12 @@ public:
   void setDrawFunction(COLORING coloring) {
     switch (coloring) {
     case COLORING::COS: {
+      normalise_mandelbrot_iterations = true;
       drawPixelWise_f = boost::bind(&Display::drawMandelbrotCOS, this, _1, _2);
       break;
     }
     case COLORING::SPLINE: {
+      normalise_mandelbrot_iterations = true;
       drawPixelWise_f =
           boost::bind(&Display::drawMandelbrotSPLINE, this, _1, _2);
       break;
@@ -142,6 +144,8 @@ protected:
     RIGHT_MOUSE_CLICK,
     MOUSE_MOVE,
     PICTURE,
+    RECORD,
+    RENDER,
     OTHER
   };
 
@@ -152,6 +156,8 @@ protected:
   virtual void drawNoUpdate() = 0;
 
   virtual void saveCurrentImage() const = 0;
+
+  virtual void renderVideo() = 0;
 
   Eigen::Vector2d getCurrentWorldPosition() const {
     Eigen::Vector2d world;
@@ -170,11 +176,6 @@ protected:
            std::to_string(getCurrentWorldZoom());
   }
 
-  bool tempSetMandelbrotSpline(const EigenSTL::vector_Vector2d &splinePoints) {
-    mandelbrot.setSpline(splinePoints);
-    redrawLastFrame();
-  }
-
   // set debug params between 0 and 1
   bool tempSetDebugParam(double dbg1, double dbg2, double dbg3, double dbg4) {
 
@@ -190,8 +191,12 @@ protected:
     splinePoints.push_back(Eigen::Vector2d(mandelbrot.getMaxIterations(),
                                            mandelbrot.getMaxIterations()));
 
-    tempSetMandelbrotSpline(splinePoints);
+    mandelbrot.setSpline(splinePoints);
+    mandelbrot.setCosParams(dbg1 * 1, dbg2 * M_PI_2, dbg3 * M_PI_2,
+                            dbg4 * M_PI_2);
+    need_update = true;
   }
+
   void userMouseInteractionCallback(EVENT event,
                                     const Eigen::Vector2d &mousePos) {
     // for drawing the zoom rectangle
@@ -209,6 +214,10 @@ protected:
       need_update = true;
     } else if (event == EVENT::PICTURE) {
       saveCurrentImage();
+    } else if (event == EVENT::RECORD) {
+      planar_transformation.recordCurrentPerspective();
+    } else if (event == EVENT::RENDER) {
+      renderVideo();
     }
   }
 
@@ -218,10 +227,58 @@ protected:
     return mandelbrot.getMaxIterations();
   }
 
+  double createPlayback() { return planar_transformation.createPlayback(); }
+
+  bool setWindow2RecordedTime(double t) {
+    if (planar_transformation.setWindow2RecordedTime(t)) {
+      need_update = true;
+      return true;
+    }
+    return false;
+  }
+
+  void calculateImage(bool load_from_stored) {
+    chooseNumCalculations();
+    if (load_from_stored) {
+      drawAllPixel();
+      return;
+    }
+    if (num_threads > 1) {
+      const int numPixel = getWindowSizeX() * getWindowSizeY();
+      // Dont make the size too small to avoid "too much access to the Thread
+      // manager which is mutexed. Dont make the size too big to avoid one
+      // thread to be finnished with nothing to do left while others are still
+      // calculateing.
+      const int package_size = getWindowSizeX();
+      multithreadManager.reset(package_size, numPixel);
+
+      std::vector<std::thread> threadpool;
+
+      for (int t = 0; t < num_threads; t++) {
+        // starting the thread
+        threadpool.push_back(
+            std::thread(&Display::calculateImageMultiThreaded, this));
+      }
+
+      // wait until all are finnished
+      std::for_each(threadpool.begin(), threadpool.end(),
+                    std::mem_fn(&std::thread::join));
+
+    } else {
+      calculateImageSingleThreaded();
+    }
+
+    if (normalise_mandelbrot_iterations) {
+      normalizeLastData();
+    }
+
+    drawAllPixel();
+  }
+
 private:
   void chooseNumCalculations() {
     // iteration_resolution low: 100, high: 1000
-    const double iteration_resolution = 255;
+    const double iteration_resolution = 1000;
     const double max_log_zoom = 35;
     // depending on zoom factor wee need more iterations
     const double zoom = std::log(-getCurrentWorldZoom());
@@ -287,44 +344,6 @@ private:
         lastData(x, y) = iterations;
       }
     }
-  }
-
-  void calculateImage(bool load_from_stored) {
-    chooseNumCalculations();
-    if (load_from_stored) {
-      drawAllPixel();
-      return;
-    }
-    if (num_threads > 1) {
-      const int numPixel = getWindowSizeX() * getWindowSizeY();
-      // Dont make the size too small to avoid "too much access to the Thread
-      // manager which is mutexed. Dont make the size too big to avoid one
-      // thread to be finnished with nothing to do left while others are still
-      // calculateing.
-      const int package_size = getWindowSizeX();
-      multithreadManager.reset(package_size, numPixel);
-
-      std::vector<std::thread> threadpool;
-
-      for (int t = 0; t < num_threads; t++) {
-        // starting the thread
-        threadpool.push_back(
-            std::thread(&Display::calculateImageMultiThreaded, this));
-      }
-
-      // wait until all are finnished
-      std::for_each(threadpool.begin(), threadpool.end(),
-                    std::mem_fn(&std::thread::join));
-
-    } else {
-      calculateImageSingleThreaded();
-    }
-
-    if (normalise_mandelbrot_iterations) {
-      normalizeLastData();
-    }
-
-    drawAllPixel();
   }
 
   void drawMandelbrotCOS(int x, int y) {

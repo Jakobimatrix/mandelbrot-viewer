@@ -1,5 +1,6 @@
 #include <base/macros.hpp>
 #include <display/displayOpenCV.h>
+#include <opencv2/videoio.hpp>
 
 namespace disp {
 
@@ -108,7 +109,26 @@ void DisplayOpenCV::drawRect(const geometry::Rect &rect) {
   }
 }
 
-void DisplayOpenCV::drawNoUpdate() { cv::waitKey(20); }
+void DisplayOpenCV::drawNoUpdate() {
+  // open cv does not support a KEY listener, so I put that key listening to the
+  // NOP operation
+  int key = cv::waitKey(20);
+  // std::cout << key << std::endl;
+  EVENT own_event = EVENT::OTHER;
+  if (key == 233) { // ALT
+    own_event = EVENT::RECORD;
+  } else if (key == 227) { // strg
+    own_event = EVENT::RENDER;
+  } else if (key == 27) { // ESC
+    own_event = EVENT::OTHER;
+  } else if (key == 3) { // alt gr
+    own_event = EVENT::OTHER;
+  } else if (key == 32) { // Space
+    own_event = EVENT::OTHER;
+  }
+  const Eigen::Vector2d pos(0, 0); // unknown
+  this->userMouseInteractionCallback(own_event, pos);
+}
 
 void DisplayOpenCV::saveCurrentImage() const {
   const std::string name = getCurrentPositionIdentifier();
@@ -122,6 +142,7 @@ void DisplayOpenCV::callUserMouseInteractionCallback(int event, int x, int y,
   // https://vovkos.github.io/doxyrest-showcase/opencv/sphinx_rtd_theme/enum_cv_MouseEventTypes.html
   EVENT own_event = EVENT::OTHER;
   // std::cout << "EVENT: " << event << std::endl;
+  // std::cout << "FLAG: " << flags << std::endl;
   if (event == cv::EVENT_MBUTTONUP) {
     own_event = EVENT::PICTURE;
   } else if (event == cv::EVENT_LBUTTONDOWN) {
@@ -136,6 +157,43 @@ void DisplayOpenCV::callUserMouseInteractionCallback(int event, int x, int y,
   const Eigen::Vector2d pos(x, y);
   static_cast<DisplayOpenCV *>(me)->userMouseInteractionCallback(own_event,
                                                                  pos);
+}
+
+void DisplayOpenCV::renderVideo() {
+  bool isColor = (image.type() == CV_8UC3);
+  cv::VideoWriter writer;
+  // select desired codec (must be available at runtime)
+  // int codec =   cv::VideoWriter::fourcc('M','J','P','G');
+  int codec = cv::VideoWriter::fourcc('X', '2', '6', '4');
+  // int codec = cv::VideoWriter::fourcc('X','V','I','D');
+  // int codec = cv::VideoWriter::fourcc('M','P','E','G');
+  // int codec = cv::VideoWriter::fourcc('H','2','6','4');
+  // int codec = cv::VideoWriter::fourcc('M','P','4','V');
+  // int codec = cv::VideoWriter::fourcc('A','V','C','1');
+  // int codec = cv::VideoWriter::fourcc('D','I','V','X');
+
+  double fps = 25.0; // framerate of the created video stream
+  std::string filename = "mandelzoom.avi"; // name of the output video file
+  writer.open(filename, codec, fps, image.size(), isColor);
+  // check if we succeeded
+  if (!writer.isOpened()) {
+    std::cout << "Could not open the output video file for write" << std::endl;
+    return;
+  }
+  std::cout << "Begin rendering video. Abort with Q" << std::endl;
+  const double end_time = createPlayback();
+  for (double t = 0; t < end_time; t = t + 0.001) {
+    if (!setWindow2RecordedTime(t)) {
+      std::cout << "Rendering fail. Invalide Time" << std::endl;
+      break;
+    }
+    calculateImage(false);
+    updateImage();
+    writer.write(image);
+    const char c = static_cast<char>(cv::waitKey(5));
+    if (c == 'q' || c == 'Q')
+      break;
+  }
 }
 
 void DisplayOpenCV::dbgSliderCallback(int i, void *me) {

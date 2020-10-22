@@ -13,4 +13,5 @@ CTestTestfile.cmake
 Release/src/
 Debug/src/
 build/
+*.avi
 

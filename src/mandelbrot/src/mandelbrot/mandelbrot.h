@@ -32,6 +32,8 @@ public:
 
   bool setSpline(const EigenSTL::vector_Vector2d &splinePoints);
 
+  void setCosParams(double a, double b, double c, double d);
+
   void setSmoothing(bool s);
 
   bool getSmoothing() const;
@@ -40,12 +42,17 @@ private:
   static void mandelbrotIteration(const Eigen::Vector2d &poition,
                                   Eigen::Vector2d &Zn);
 
-  unsigned int max_iterations = 100;
-  double inv_max_iterations_d = 1. / 100.;
+  unsigned int max_iterations = 0;
+  double inv_max_iterations_d = 0.;
 
   tk::spline redistribution_spline;
 
-  bool smooting = true;
+  double cos_const_a = 0.069; // 0.15;
+  double cos_const_b = 0;
+  double cos_const_c = 0.6;
+  double cos_const_d = 1;
+
+  bool smooting = false;
 };
 
 #endif

@@ -12,6 +12,7 @@ PlanarTransformation::PlanarTransformation() {
   homographyWorld2Picture(1, 1) =
       -1; // y in picture is -y in reight handed coordinate system
   homographyPicture2World = homographyWorld2Picture.inverse();
+  setZerosInHomogen(homographyPicture2World);
 }
 
 void PlanarTransformation::getPictureReferenceABCD(
@@ -50,7 +51,7 @@ void PlanarTransformation::initHomography(const Eigen::Vector2d &image_size,
   homographyWorld2Picture(1, 1) =
       -1; // y in picture is -y in reight handed coordinate system
   homographyPicture2World = homographyWorld2Picture.inverse();
-
+  setZerosInHomogen(homographyPicture2World);
   setNewZoomWindowFromWorld(world_corners, image_size, true);
 }
 
@@ -114,8 +115,9 @@ void PlanarTransformation::setNewZoomWindowFromPicture(
   // find the new homography
   homographyWorld2Picture = tool::Homography::findHomography(
       associated_points, tool::Homography::Methode::PARTIAL_PIV_LU);
+  setZerosInHomogen(homographyWorld2Picture);
   homographyPicture2World = homographyWorld2Picture.inverse();
-
+  setZerosInHomogen(homographyPicture2World);
   if (save_history) {
     saveCurrentToHistory();
   }
@@ -150,6 +152,58 @@ double PlanarTransformation::getCurrentZoom() const {
   return homographyWorld2Picture(1, 1);
 }
 
+void PlanarTransformation::recordCurrentPerspective() {
+  recordedPerspective.push_back(history[history_current_index]);
+  std::cout << "recorded current viewe" << std::endl;
+}
+
+double PlanarTransformation::createPlayback() {
+  std::vector<double> X, Y, F, T;
+  double t = -1;
+  for (const auto &h : recordedPerspective) {
+    t++;
+    F.push_back(h(0, 0));
+    X.push_back(h(0, 2));
+    Y.push_back(h(1, 2));
+    T.push_back(t);
+    std::cout << t << ": " << h(0, 0) << std::endl;
+  }
+  recorded_zoom.set_boundary(tk::spline::second_deriv, 0.0,
+                             tk::spline::first_deriv, 0.0, false);
+  recorded_zoom.set_points(T, F, false);
+  recorded_x.set_boundary(tk::spline::second_deriv, 0.0,
+                          tk::spline::first_deriv, 0.0, false);
+  recorded_x.set_points(T, X, false);
+  recorded_y.set_boundary(tk::spline::second_deriv, 0.0,
+                          tk::spline::first_deriv, 0.0, false);
+  recorded_y.set_points(T, Y, false);
+  recorded_time_end = t;
+
+  for (double i = 0; i < t; i = i + 0.01) {
+    std::cout << i << ": " << recorded_zoom(i) << std::endl;
+  }
+  return t;
+}
+
+bool PlanarTransformation::setWindow2RecordedTime(double t) {
+  if (t > recorded_time_end) {
+    return false;
+  }
+  setZerosInHomogen(homographyWorld2Picture);
+  homographyWorld2Picture(0, 0) = recorded_zoom(t);
+  homographyWorld2Picture(0, 2) = recorded_x(t);
+  homographyWorld2Picture(1, 1) = -recorded_zoom(t);
+  homographyWorld2Picture(1, 2) = recorded_y(t);
+  homographyPicture2World = homographyWorld2Picture.inverse();
+  setZerosInHomogen(homographyPicture2World);
+  return true;
+}
+
+void PlanarTransformation::clearRecord() {
+  recordedPerspective.clear();
+  recorded_time_end = -1;
+}
+
 void PlanarTransformation::saveCurrentToHistory() {
   history.push_back(homographyWorld2Picture);
   history_current_index = history.size() - 1;
@@ -162,6 +216,16 @@ void PlanarTransformation::historyStepBack() {
   history_current_index--;
   homographyWorld2Picture = history[history_current_index];
   homographyPicture2World = homographyWorld2Picture.inverse();
+  setZerosInHomogen(homographyPicture2World);
+  history.pop_back();
+}
+
+void PlanarTransformation::setZerosInHomogen(Eigen::Matrix3d &h) const {
+  h(0, 1) = 0;
+  h(1, 0) = 0;
+  h(2, 0) = 0;
+  h(2, 1) = 0;
+  h(2, 2) = 1;
 }
 
 void PlanarTransformation::debugInformation(const Eigen::Vector2d &image_size) {

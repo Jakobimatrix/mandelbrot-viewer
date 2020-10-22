@@ -41,6 +41,8 @@ public:
 
   void drawNoUpdate() override;
 
+  void renderVideo() override;
+
   static void callUserMouseInteractionCallback(int event, int x, int y,
                                                int flags, void *me);
 

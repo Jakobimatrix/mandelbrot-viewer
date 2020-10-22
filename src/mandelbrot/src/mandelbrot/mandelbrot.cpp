@@ -1,7 +1,10 @@
 #include <mandelbrot/mandelbrot.h>
 #include <vector>
 
-Mandelbrot::Mandelbrot() { initRedistributionSpline(); }
+Mandelbrot::Mandelbrot() {
+  setMaxIterations(100);
+  initRedistributionSpline();
+}
 
 double Mandelbrot::mandelbrot(const Eigen::Vector2d &position) const {
   if (smooting) {
@@ -110,6 +113,13 @@ void Mandelbrot::initRedistributionSpline() {
   redistribution_spline.set_points(X, Y);
 }
 
+void Mandelbrot::setCosParams(double a, double b, double c, double d) {
+  cos_const_a = a;
+  cos_const_b = b;
+  cos_const_c = c;
+  cos_const_d = d;
+}
+
 bool Mandelbrot::setSpline(const EigenSTL::vector_Vector2d &spline_points) {
 
   if (spline_points.size() < 3) {
@@ -135,10 +145,10 @@ double Mandelbrot::redistributeHue(double iteration) {
 
 color::RGB<double> Mandelbrot::mandelbrotCOS(double iterations) {
   color::RGB<double> rgb;
-  const double a = 3.0 + iterations * 0.15;
-  rgb.r = 0.5 + 0.5 * std::cos(a);
-  rgb.g = 0.5 + 0.5 * std::cos(a + 0.6);
-  rgb.b = 0.5 + 0.5 * std::cos(a + 1.0);
+  const double a = 3.0 + iterations * cos_const_a;
+  rgb.r = 0.5 + 0.5 * std::cos(a + cos_const_b);
+  rgb.g = 0.5 + 0.5 * std::cos(a + cos_const_c);
+  rgb.b = 0.5 + 0.5 * std::cos(a + cos_const_d);
   return rgb;
 }
 

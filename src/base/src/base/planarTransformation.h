@@ -3,6 +3,7 @@
 
 #include <base/structs.hpp>
 #include <eigen3/Eigen/Core>
+#include <spline.h>
 #include <vector>
 
 namespace conv {
@@ -41,7 +42,17 @@ public:
 
   double getCurrentZoom() const;
 
+  void recordCurrentPerspective();
+
+  void clearRecord();
+
+  double createPlayback();
+
+  bool setWindow2RecordedTime(double t);
+
 private:
+  void setZerosInHomogen(Eigen::Matrix3d &h) const;
+
   void debugInformation(const Eigen::Vector2d &image_size);
 
   static void
@@ -52,6 +63,7 @@ private:
   getRectReferenceABCD(const geometry::Rect &rect,
                        std::array<Eigen::Vector2d, 4> &reference_points,
                        bool given_rect_from_picture);
+
   void saveCurrentToHistory();
 
   // clang-format off
@@ -61,7 +73,7 @@ private:
    * x,y = translation
    *
    *      |f  0  x|
-   * H =  |0  f  y|
+   * H =  |0  -f  y|
    *      |0  0  1|
    * */
   //clang-format on
@@ -70,6 +82,12 @@ private:
 
   typedef std::vector<Eigen::Matrix3d,  Eigen::aligned_allocator<Eigen::Matrix3d>> History;
   typedef History::iterator HistoryIt;
+
+  History recordedPerspective;
+  tk::spline recorded_zoom;
+  tk::spline recorded_x;
+  tk::spline recorded_y;
+  double recorded_time_end = -1;
 
   History history;
   int history_current_index = -1;
